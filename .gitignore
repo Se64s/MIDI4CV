@@ -1,0 +1,6 @@
+# Ignored folders
+.vscode/
+build/
+
+# Text files with crash dumps
+Tools/CrashDebug/*.txt
