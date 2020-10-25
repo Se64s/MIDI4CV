@@ -21,6 +21,7 @@
 #include "sys_mcu.h"
 #include "sys_rtos.h"
 #include "cli_task.h"
+#include "midi_task.h"
 #ifdef USE_USER_ASSERT
 #include "user_error.h"
 #endif
@@ -55,6 +56,7 @@ int main(void)
 
   /* Init user tasks */
   (void)bCliTaskInit();
+  (void)bMidiTaskInit();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();

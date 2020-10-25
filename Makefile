@@ -45,6 +45,7 @@ C_SOURCES =  \
 App/Src/main.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
+App/Src/midi_task.c \
 BSP/Src/stm32g0xx_it.c \
 BSP/Src/stm32g0xx_hal_msp.c \
 BSP/Src/system_stm32g0xx.c \
@@ -54,6 +55,7 @@ BSP/Src/sys_serial.c \
 BSP/Src/sys_ll_serial.c \
 Lib/cbuf/circular_buffer.c \
 Lib/printf/printf.c \
+Lib/midi/midi_lib.c \
 Lib/UserError/user_error.c \
 Lib/CrashCatcher/Core/src/CrashCatcher.c \
 Lib/CrashCatcher/Usr/src/crash_hexdump.c \
@@ -142,6 +144,7 @@ C_DEFS =  \
 -DSTM32G070xx \
 -DUSE_USER_ASSERT \
 -DUSE_USER_RTOS \
+-DUSE_USER_RTOS_TICK \
 
 
 # AS includes
@@ -155,6 +158,7 @@ C_INCLUDES =  \
 -ILib/cbuf \
 -ILib/printf \
 -ILib/UserError \
+-ILib/midi \
 -ILib/CrashCatcher/include \
 -ILib/CrashCatcher/Core/src \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \

@@ -29,6 +29,7 @@ extern "C"
 typedef enum
 {
     SYS_SERIAL_0 = 0U,
+    SYS_SERIAL_1 = 1U,
     SYS_SERIAL_NODEF = 0xFFU,
 } sys_serial_port_t;
 
