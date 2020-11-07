@@ -22,6 +22,9 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
+/* Midi serial debug */
+// #define MIDI_SERIAL_DEBUG
+
 /* Define midi serial interface */
 #define MIDI_SERIAL                         SYS_SERIAL_1
 
@@ -72,29 +75,98 @@ void vMidiTaskMain(void *pvParameters);
   * @param event serial event generated
   * @retval None
   */
-void vSerialEventCb( sys_serial_event_t event );
+void vSerialEventCb(sys_serial_event_t event);
+
+/**
+ * @brief Callback for Midi commands with 1 data argument.
+ * @param cmd 
+ * @param data 
+ */
+void vMidiCallBackCmd1(uint8_t cmd, uint8_t data);
+
+/**
+ * @brief Callback for Midi commands with 2 data arguments.
+ * 
+ * @param cmd 
+ * @param data0 
+ * @param data1 
+ */
+void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1);
 
 /* Private fuctions ----------------------------------------------------------*/
 
 void vSerialEventCb( sys_serial_event_t event )
 {
-    switch (event)
+    if ((xMidiTaskHandle != NULL) && (xMidiQueueHandler != NULL))
     {
-        case SYS_SERIAL_EVENT_RX_IDLE:
-        break;
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        MidiEvent_t xEvent = { .eType = MIDI_EVENT_SERIAL_EVENT };
 
-        case SYS_SERIAL_EVENT_ERROR:
-        break;
+        switch (event)
+        {
+            case SYS_SERIAL_EVENT_RX_IDLE:
+            {
+                xEvent.uPayload.xSerialEvent.eEvent = MIDI_SERIAL_EVENT_RX;
+            }
+            break;
 
-        default:
-        break;
+            case SYS_SERIAL_EVENT_RX_BUF_FULL:
+            {
+                xEvent.uPayload.xSerialEvent.eEvent = MIDI_SERIAL_EVENT_RX;
+            }
+            break;
+
+            case SYS_SERIAL_EVENT_ERROR:
+            {
+                xEvent.uPayload.xSerialEvent.eEvent = MIDI_SERIAL_EVENT_ERROR;
+            }
+            break;
+
+            default:
+            {
+                xEvent.uPayload.xSerialEvent.eEvent = MIDI_SERIAL_EVENT_NOT_DEF;
+            }
+            break;
+        }
+
+        if (xEvent.uPayload.xSerialEvent.eEvent != MIDI_SERIAL_EVENT_NOT_DEF)
+        {
+            xQueueSendFromISR(xMidiQueueHandler, &xEvent, &xHigherPriorityTaskWoken);
+        }
     }
+}
+
+void vMidiCallBackCmd1(uint8_t cmd, uint8_t data)
+{
+#ifdef MIDI_SERIAL_DEBUG
+    vCliRawPrintf("\r\nCMD: %02X-%02X", cmd, data);
+#endif
+    MidiEvent_t xEvent = { 
+        .eType = MIDI_EVENT_MIDI_CMD_DATA1, 
+        .uPayload.xCmdData1.u8Status = cmd,
+        .uPayload.xCmdData1.u8Data1 = data
+    };
+    (void)xQueueSend(xMidiQueueHandler, &xEvent, (TickType_t)0);
+}
+
+void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1)
+{
+#ifdef MIDI_SERIAL_DEBUG
+    vCliRawPrintf("\r\nCMD: %02X-%02X-%02X", cmd, data0, data1);
+#endif
+    MidiEvent_t xEvent = { 
+        .eType = MIDI_EVENT_MIDI_CMD_DATA2, 
+        .uPayload.xCmdData2.u8Status = cmd,
+        .uPayload.xCmdData2.u8Data1 = data0,
+        .uPayload.xCmdData2.u8Data2 = data1
+    };
+    (void)xQueueSend(xMidiQueueHandler, &xEvent, (TickType_t)0);
 }
 
 void vMidiTaskMain( void *pvParameters )
 {
     /* Init Midi lib control structure */
-    (void)MidiLibInit(&xMidiHandler, u8SysExBuff, sizeof(u8SysExBuff), NULL, NULL, NULL, NULL);
+    (void)MidiLibInit(&xMidiHandler, u8SysExBuff, sizeof(u8SysExBuff), NULL, vMidiCallBackCmd1, vMidiCallBackCmd2, NULL);
 
     /* Init delay to for pow stabilization */
     vTaskDelay(pdMS_TO_TICKS(MIDI_INIT_DELAY));
@@ -111,18 +183,35 @@ void vMidiTaskMain( void *pvParameters )
         {
             switch (xEvent.eType)
             {
-                case MIDI_EVENT_SERIAL_DATA:
+                case MIDI_EVENT_SERIAL_EVENT:
                     {
-                        vCliPrintf(MIDI_TASK_NAME, "Rx serial data: %d bytes", xEvent.uPayload.xSerialData.u8DataLen);
-
-                        uint32_t u32Index = 0;
-
-                        while (u32Index < xEvent.uPayload.xSerialData.u8DataLen)
+                        uint8_t u8DataRx = 0;
+                        while (SYS_SERIAL_Read(MIDI_SERIAL, &u8DataRx, 1U) != 0U)
                         {
-                            (void)MidiLibUpdate(&xMidiHandler, xEvent.uPayload.xSerialData.pu8Data[u32Index++]);
+#ifdef MIDI_SERIAL_DEBUG
+                            vCliRawPrintf("\r\nRx x%02X", u8DataRx);
+#endif
+                            (void)MidiLibUpdate(&xMidiHandler, u8DataRx);
                         }
                     }
                     break;
+
+                case MIDI_EVENT_MIDI_CMD_DATA1:
+                {
+                    vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", 
+                        xEvent.uPayload.xCmdData1.u8Status, 
+                        xEvent.uPayload.xCmdData1.u8Data1);
+                }
+                break;
+
+                case MIDI_EVENT_MIDI_CMD_DATA2:
+                {
+                    vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", 
+                        xEvent.uPayload.xCmdData2.u8Status, 
+                        xEvent.uPayload.xCmdData2.u8Data1,
+                        xEvent.uPayload.xCmdData2.u8Data2);
+                }
+                break;
 
                 default:
                     vCliPrintf(MIDI_TASK_NAME, "Not defined event; %02X", xEvent.eType);
@@ -149,7 +238,9 @@ bool bMidiTaskInit(void)
 
     /* Check resources */
     ERR_ASSERT(xMidiTaskHandle);
-    if (xMidiTaskHandle != NULL)
+    ERR_ASSERT(xMidiQueueHandler);
+
+    if ((xMidiTaskHandle != NULL) && (xMidiQueueHandler != NULL))
     {
         bRetval = true;
     }
@@ -157,20 +248,16 @@ bool bMidiTaskInit(void)
     return bRetval;
 }
 
-QueueHandle_t xMidiGetQueue(void)
-{
-    return xMidiQueueHandler;
-}
-
-bool bMidiTaskNotify(uint32_t u32Event)
+bool xMidiQueueEvent(MidiEvent_t *xMidiEvent)
 {
     bool bRetval = false;
 
-    /* Check if task has been init */
-    if (xMidiTaskHandle != NULL)
+    if (xMidiQueueHandler != NULL)
     {
-        xTaskNotify(xMidiTaskHandle, u32Event, eSetBits);
-        bRetval = true;
+        if (xQueueSend(xMidiQueueHandler, (void*) &xMidiEvent, (TickType_t) 0) == pdTRUE)
+        {
+            bRetval = true;
+        }
     }
 
     return bRetval;

@@ -31,31 +31,59 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 
-/** Midi task defined events */
-typedef enum
+/** Midi event types */
+typedef enum MidiEventType
 {
-    MIDI_EVENT_SERIAL_DATA = 0U,
-    MIDI_EVENT_NOT_DEF = 0xFF
+    MIDI_EVENT_SERIAL_EVENT = 0U,
+    MIDI_EVENT_MIDI_CMD_DATA1,
+    MIDI_EVENT_MIDI_CMD_DATA2,
+    MIDI_EVENT_MIDI_CMD_SYSEX,
+    MIDI_EVENT_MIDI_CMD_RT,
+    SYNTH_EVENT_NOT_DEF = 0xFFU
 } MidiEventType_t;
 
-/** Payload for MIDI msg event */
-typedef struct
+/** Midi serial event */
+typedef enum MidiSerialEvent
 {
-    uint8_t u8DataLen;
-    uint8_t *pu8Data;
-} MidiEventPayloadSerialData_t;
+    MIDI_SERIAL_EVENT_RX,           /**< Rx data from serial port */
+    MIDI_SERIAL_EVENT_ERROR,        /**< Error detection */
+    MIDI_SERIAL_EVENT_NOT_DEF = 0xFFU
+} MidiSerialEvent_t;
+
+/** Payload for MIDI serial event */
+typedef struct MidiEventPayloadSerialEvent
+{
+    MidiSerialEvent_t eEvent;       /**< Definition with event type */
+} MidiEventPayloadSerialEvent_t;
+
+/** Payload for MIDI command with one argument */
+typedef struct MidiEventPayloadMidiCmdData1
+{
+    uint8_t u8Status;
+    uint8_t u8Data1;
+} MidiEventPayloadMidiCmdData1_t;
+
+/** Payload for MIDI command with two arguments */
+typedef struct MidiEventPayloadMidiCmdData2
+{
+    uint8_t u8Status;
+    uint8_t u8Data1;
+    uint8_t u8Data2;
+} MidiEventPayloadMidiCmdData2_t;
 
 /** Union definitions with all event payload */
-typedef union
+typedef union MidiEventPayload
 {
-    MidiEventPayloadSerialData_t xSerialData;
-} MidiPayload_t;
+    MidiEventPayloadSerialEvent_t xSerialEvent;
+    MidiEventPayloadMidiCmdData1_t xCmdData1;
+    MidiEventPayloadMidiCmdData2_t xCmdData2;
+} MidiEventPayload_t;
 
-/** Midi Event definition */
-typedef struct
+/** MIDI task event */
+typedef struct MidiEvent
 {
-    MidiEventType_t eType;      /** Event type id */
-    MidiPayload_t uPayload;     /** Payload of event id */
+    MidiEventType_t eType;          /**< Event type id */
+    MidiEventPayload_t uPayload;    /**< Payload of event id */
 } MidiEvent_t;
 
 /* Exported constants --------------------------------------------------------*/
@@ -69,17 +97,12 @@ typedef struct
 bool bMidiTaskInit(void);
 
 /**
- * @brief Get command queue for task.
- * @return QueueHandle_t 
+ * @brief Queue command for midi task.
+ * @param xMidiEvent 
+ * @return true 
+ * @return false 
  */
-QueueHandle_t xMidiGetQueue(void);
-
-/**
-  * @brief Notify event to a task.
-  * @param u32Event event to notify.
-  * @retval operation result, true for correct read, false for error.
-  */
-bool bMidiTaskNotify(uint32_t u32Event);
+bool xMidiQueueEvent(MidiEvent_t *xMidiEvent);
 
 #ifdef __cplusplus
 }
