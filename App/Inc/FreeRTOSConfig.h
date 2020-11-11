@@ -43,15 +43,18 @@
 
 /* Ensure stdint is only used by the compiler, and not the assembler. */
 #include <stdint.h>
+#ifdef USE_USER_ASSERT
+#include "user_error.h"
+#endif
 extern uint32_t SystemCoreClock;
 
 #define configUSE_PREEMPTION			1
 #define configUSE_IDLE_HOOK				0
-#define configUSE_TICK_HOOK				1
+#define configUSE_TICK_HOOK				0
 #define configCPU_CLOCK_HZ				( SystemCoreClock )
 #define configTICK_RATE_HZ				( ( TickType_t ) 1000U )
 #define configMAX_PRIORITIES			( 5 )
-#define configMINIMAL_STACK_SIZE		( ( unsigned short ) 128U )
+#define configMINIMAL_STACK_SIZE		( ( unsigned short ) 256U )
 #define configTOTAL_HEAP_SIZE			( ( size_t ) ( 7168 ) )
 #define configMAX_TASK_NAME_LEN			( 5 )
 #define configUSE_TRACE_FACILITY		0
@@ -93,13 +96,19 @@ to exclude the API function. */
 
 /* Normal assert() semantics without relying on the provision of an assert.h
 header file. */
+#ifdef USE_USER_ASSERT
+#define configASSERT( x )   ERR_ASSERT( x )
+#else
 #define configASSERT( x ) if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS(); for( ;; ); }
+#endif
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
 standard names - or at least those used in the unmodified vector table. */
 #define vPortSVCHandler SVC_Handler
 #define xPortPendSVHandler PendSV_Handler
+#ifndef USE_USER_RTOS_TICK
 #define xPortSysTickHandler SysTick_Handler
+#endif
 
 #endif /* FREERTOS_CONFIG_H */
 

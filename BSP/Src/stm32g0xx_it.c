@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_it.h"
+#include "sys_rtos.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +33,9 @@ extern TIM_HandleTypeDef htim3;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
 extern UART_HandleTypeDef huart2;
+extern DMA_HandleTypeDef hdma_usart3_rx;
+extern DMA_HandleTypeDef hdma_usart3_tx;
+extern UART_HandleTypeDef huart3;
 
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
@@ -74,7 +78,7 @@ void PendSV_Handler(void)
 }
 #endif
 
-#ifndef USE_USER_RTOS
+#ifdef USE_USER_RTOS_TICK
 /**
   * @brief This function handles System tick timer.
   */
@@ -92,19 +96,21 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles DMA1 channel 1 interrupt.
-  */
-void DMA1_Channel1_IRQHandler(void)
-{
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
-}
-
-/**
   * @brief This function handles DMA1 channel 2 and channel 3 interrupts.
   */
 void DMA1_Channel2_3_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
+  HAL_DMA_IRQHandler(&hdma_usart2_rx);
+}
+
+/**
+  * @brief This function handles DMA1 channel 4 to channel 7 interrupts.
+  */
+void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_usart3_tx);
+  HAL_DMA_IRQHandler(&hdma_usart3_rx);
 }
 
 /**
@@ -116,7 +122,18 @@ void TIM3_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles USART2 global interrupt / USART2 wake-up interrupt through EXTI line 26.
+  * @brief Map timer update event.
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM3)
+  {
+    SYS_RTOS_TimerTick();
+  }
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
   */
 void USART2_IRQHandler(void)
 {
@@ -129,6 +146,23 @@ void USART2_IRQHandler(void)
 
     /* Abort and retrigger reception */
     HAL_UART_AbortReceive_IT(&huart2);
+  }
+}
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_4_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart3);
+
+  /* Handle idle event on usart */
+  if (__HAL_UART_GET_IT(&huart3, UART_IT_IDLE))
+  {
+    __HAL_UART_CLEAR_IT(&huart3, UART_CLEAR_IDLEF);
+
+    /* Abort and retrigger reception */
+    HAL_UART_AbortReceive_IT(&huart3);
   }
 }
 

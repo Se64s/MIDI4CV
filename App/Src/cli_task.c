@@ -28,6 +28,12 @@
 /* End of line terminator */
 #define CLI_EOL         "\r\n"
 
+/* Initial wait */
+#define CLI_INIT_DELAY      (0U)
+
+/* Serial port to use */
+#define CLI_SERIAL          SYS_SERIAL_0
+
 /* Serial signals */
 #define CLI_SIGNAL_TX_DONE  (1UL << 0)
 #define CLI_SIGNAL_RX_DONE  (1UL << 1)
@@ -143,7 +149,7 @@ void _cli_main( void *pvParameters )
     cli_cmd_init();
 
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(500U));
+    vTaskDelay(pdMS_TO_TICKS(CLI_INIT_DELAY));
 
     /* Start message */
     _init_msg();
@@ -158,7 +164,7 @@ void _cli_main( void *pvParameters )
         if (event_wait == pdPASS)
         {
             /* Fill input buffer */
-            while (SYS_SERIAL_Read(SYS_SERIAL_0, &u8RxData, 1U) != 0)
+            while (SYS_SERIAL_Read(CLI_SERIAL, &u8RxData, 1U) != 0)
             {
                 /* End of command detected */
                 if ((u8RxData == '\r') || (u8RxData == '\n'))
@@ -211,7 +217,7 @@ bool bCliTaskInit(void)
     bool bRetval = false;
 
     /* Init HW resources */
-    (void)SYS_SERIAL_Init(SYS_SERIAL_0, _event_cb);
+    (void)SYS_SERIAL_Init(CLI_SERIAL, _event_cb);
 
     /* Create mutex */
     cli_serial_mutex = xSemaphoreCreateMutex();
@@ -259,7 +265,7 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
         if (len_data > 0)
         {
             ser_tx_done = false;
-            SYS_SERIAL_Send(SYS_SERIAL_0, (uint8_t *)print_output_buffer, len_data);
+            SYS_SERIAL_Send(CLI_SERIAL, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
                 vTaskDelay(pdMS_TO_TICKS(1U));
@@ -274,9 +280,9 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
 
         if (len_data > 0)
         {
-            SYS_SERIAL_Send(SYS_SERIAL_0, (uint8_t *)print_output_buffer, len_data);
+            SYS_SERIAL_Send(CLI_SERIAL, (uint8_t *)print_output_buffer, len_data);
             ser_tx_done = false;
-            SYS_SERIAL_Send(SYS_SERIAL_0, (uint8_t *)print_output_buffer, len_data);
+            SYS_SERIAL_Send(CLI_SERIAL, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
                 vTaskDelay(pdMS_TO_TICKS(1U));
@@ -312,7 +318,7 @@ void vCliRawPrintf(const char *Format, ...)
         if (len_data > 0)
         {
             ser_tx_done = false;
-            SYS_SERIAL_Send(SYS_SERIAL_0, (uint8_t *)print_output_buffer, len_data);
+            SYS_SERIAL_Send(CLI_SERIAL, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true);
         }
 

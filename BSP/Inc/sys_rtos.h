@@ -22,6 +22,7 @@ extern "C"
 #include <stdint.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 #include "semphr.h"
 #include "FreeRTOSConfig.h"
 
@@ -34,6 +35,12 @@ extern "C"
  * @retval None
  */
 void SYS_RTOS_ClockConfig(void);
+
+/**
+ * @brief Rtos tick.
+ * @retval None
+ */
+void SYS_RTOS_TimerTick(void);
 
 #ifdef __cplusplus
 }
