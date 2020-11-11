@@ -21,24 +21,22 @@
 #define MIDI_IS_STATUS(data)        ( ( (data) & MIDI_STATUS_MASK ) == MIDI_STATUS_MASK )
 // #define MIDI_IS_RT(data)            (((data) & MIDI_STATUS_RT_MASK) == MIDI_STATUS_RT_MASK)
 #define MIDI_IS_RT(data)            ( ( ( (data) & MIDI_STATUS_RT_MASK) == MIDI_STATUS_RT_MASK ) && ( (data) != MIDI_STATUS_SYS_EX_START) && ( (data) != MIDI_STATUS_SYS_EX_END) )
-#define MIDI_STATUS_GET_CH(status)  ( ( (status) & MIDI_STATUS_CH_MASK) >> 0 )
-#define MIDI_STATUS_GET_CMD(status) ( ( (status) & MIDI_STATUS_CMD_MASK ) >> 4 )
 
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 
-static midiStatus_t state_handler_wait_byte_init(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
-static midiStatus_t state_handler_wait_byte_first_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
-static midiStatus_t state_handler_wait_byte_second_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
-static midiStatus_t state_handler_wait_byte_sys_ex(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
-static midiStatus_t state_handler_wait_byte_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
-static midiStatus_t state_handler_dispatch_status(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_wait_byte_init(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_wait_byte_first_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_wait_byte_second_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_wait_byte_sys_ex(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_wait_byte_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
+static MidiStatus_t state_handler_dispatch_status(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte);
 
 /* Private function ----------------------------------------------------------*/
 
-static midiStatus_t state_handler_wait_byte_init(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_wait_byte_init(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiOk;
+    MidiStatus_t retval = midiOk;
 
     if (MIDI_IS_STATUS(rx_byte))
     {
@@ -59,9 +57,9 @@ static midiStatus_t state_handler_wait_byte_init(MidiLibHandler_t *pxMidiHandler
     return retval;
 }
 
-static midiStatus_t state_handler_wait_byte_first_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_wait_byte_first_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiOk;
+    MidiStatus_t retval = midiOk;
 
     if (MIDI_IS_STATUS(rx_byte))
     {
@@ -87,9 +85,9 @@ static midiStatus_t state_handler_wait_byte_first_data(MidiLibHandler_t *pxMidiH
     return retval;
 }
 
-static midiStatus_t state_handler_wait_byte_second_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_wait_byte_second_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiOk;
+    MidiStatus_t retval = midiOk;
 
     if (MIDI_IS_STATUS(rx_byte))
     {
@@ -121,9 +119,9 @@ static midiStatus_t state_handler_wait_byte_second_data(MidiLibHandler_t *pxMidi
     return retval;
 }
 
-static midiStatus_t state_handler_wait_byte_sys_ex(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_wait_byte_sys_ex(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiOk;
+    MidiStatus_t retval = midiOk;
 
     if (MIDI_IS_STATUS(rx_byte))
     {
@@ -168,9 +166,9 @@ static midiStatus_t state_handler_wait_byte_sys_ex(MidiLibHandler_t *pxMidiHandl
     return retval;
 }
 
-static midiStatus_t state_handler_wait_byte_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_wait_byte_data(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiOk;
+    MidiStatus_t retval = midiOk;
 
     if (MIDI_IS_STATUS(rx_byte))
     {
@@ -198,26 +196,26 @@ static midiStatus_t state_handler_wait_byte_data(MidiLibHandler_t *pxMidiHandler
     return retval;
 }
 
-static midiStatus_t state_handler_dispatch_status(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
+static MidiStatus_t state_handler_dispatch_status(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte)
 {
-    midiStatus_t retval = midiError;
+    MidiStatus_t retval = midiError;
 
     /* Check if 1 data cmd */
-    if (((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_PROG_CHANGE) ||
-        ((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_CH_PRESS) ||
-        (rx_byte == MIDI_STATUS_TIME_CODE) ||
-        (rx_byte == MIDI_STATUS_SONG_SELECT))
+    if ( ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_PROG_CHANGE ) ||
+        ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_CH_PRESS ) ||
+        ( rx_byte == MIDI_STATUS_TIME_CODE ) ||
+        ( rx_byte == MIDI_STATUS_SONG_SELECT ) )
     {
         pxMidiHandler->eFsmState = wait_byte_data;
         retval = midiOk;
     }
     /* Check if 2 data cmd */
-    else if (((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF) ||
-             ((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_ON) ||
-             ((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_POLY_PRESS) ||
-             ((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_CC) ||
-             ((rx_byte & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_PITCH_BEND) ||
-             (rx_byte == MIDI_STATUS_SONG_POS))
+    else if ( ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_NOTE_OFF ) ||
+             ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_NOTE_ON ) ||
+             ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_POLY_PRESS ) ||
+             ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_CC ) ||
+             ( MIDI_STATUS_GET_CMD(rx_byte) == MIDI_STATUS_PITCH_BEND ) ||
+             ( rx_byte == MIDI_STATUS_SONG_POS ) )
     {
         pxMidiHandler->eFsmState = wait_byte_first_data;
         retval = midiOk;
@@ -247,7 +245,7 @@ static midiStatus_t state_handler_dispatch_status(MidiLibHandler_t *pxMidiHandle
 /* ---------------------------------------------------------------------------*/
 
 /** State Handler definitions */
-midiStatus_t (*rx_state_table[])(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte) = {
+MidiStatus_t (*rx_state_table[])(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byte) = {
     state_handler_wait_byte_init,
     state_handler_wait_byte_first_data,
     state_handler_wait_byte_second_data,
@@ -258,7 +256,7 @@ midiStatus_t (*rx_state_table[])(MidiLibHandler_t *pxMidiHandler, uint8_t rx_byt
 /* Public function -----------------------------------------------------------*/
 
 /* Init library FSM and setup callback functions for rx parsing */
-midiStatus_t MidiLibInit(MidiLibHandler_t *pxMidiHandler,
+MidiStatus_t MidiLibInit(MidiLibHandler_t *pxMidiHandler,
                     uint8_t *pu8SysExBuff,
                     uint32_t u32SysExBuffLen,
                     midi_cb_msg_sys_ex_t cb_sys_ex,
@@ -266,7 +264,7 @@ midiStatus_t MidiLibInit(MidiLibHandler_t *pxMidiHandler,
                     midi_cb_msg_data2_t cb_msg_data2,
                     midi_cb_msg_rt_t cb_msg_rt)
 {
-    midiStatus_t retval = midiError;
+    MidiStatus_t retval = midiError;
 
     if ( (pu8SysExBuff != NULL) && (u32SysExBuffLen > 0)  && (pxMidiHandler != NULL) )
     {
@@ -301,9 +299,9 @@ midiStatus_t MidiLibInit(MidiLibHandler_t *pxMidiHandler,
 }
 
 /* Update midi rx_fsm */
-midiStatus_t MidiLibUpdate(MidiLibHandler_t *pxMidiHandler, uint8_t data_rx)
+MidiStatus_t MidiLibUpdate(MidiLibHandler_t *pxMidiHandler, uint8_t data_rx)
 {
-    midiStatus_t retval = midiError;
+    MidiStatus_t retval = midiError;
 
     if (pxMidiHandler != NULL)
     {
@@ -316,9 +314,9 @@ midiStatus_t MidiLibUpdate(MidiLibHandler_t *pxMidiHandler, uint8_t data_rx)
 }
 
 /* Set rx_fsm into reset state */
-midiStatus_t MidiLibResetHandler(MidiLibHandler_t *pxMidiHandler)
+MidiStatus_t MidiLibResetHandler(MidiLibHandler_t *pxMidiHandler)
 {
-    midiStatus_t retval = midiError;
+    MidiStatus_t retval = midiError;
 
     if (pxMidiHandler != NULL)
     {

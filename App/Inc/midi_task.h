@@ -35,10 +35,7 @@ extern "C" {
 typedef enum MidiEventType
 {
     MIDI_EVENT_SERIAL_EVENT = 0U,
-    MIDI_EVENT_MIDI_CMD_DATA1,
-    MIDI_EVENT_MIDI_CMD_DATA2,
-    MIDI_EVENT_MIDI_CMD_SYSEX,
-    MIDI_EVENT_MIDI_CMD_RT,
+    MIDI_EVENT_CFG_UPDATE,
     SYNTH_EVENT_NOT_DEF = 0xFFU
 } MidiEventType_t;
 
@@ -56,27 +53,26 @@ typedef struct MidiEventPayloadSerialEvent
     MidiSerialEvent_t eEvent;       /**< Definition with event type */
 } MidiEventPayloadSerialEvent_t;
 
-/** Payload for MIDI command with one argument */
-typedef struct MidiEventPayloadMidiCmdData1
+/** Midi Cfg parameter definition */
+typedef enum MidiCfgParameter
 {
-    uint8_t u8Status;
-    uint8_t u8Data1;
-} MidiEventPayloadMidiCmdData1_t;
+    MIDI_CFG_MODE = 0U,     /**< Midi mode */
+    MIDI_CFG_CHANNEL,       /**< Midi channel */
+    MIDI_CFG_NUM_PARAM,     /**< Number of defined parameters */
+} MidiCfgParameter_t;
 
-/** Payload for MIDI command with two arguments */
-typedef struct MidiEventPayloadMidiCmdData2
+/** Payload for MIDI cfg update event */
+typedef struct MidiEventPayloadCfgUpdateEvent
 {
-    uint8_t u8Status;
-    uint8_t u8Data1;
-    uint8_t u8Data2;
-} MidiEventPayloadMidiCmdData2_t;
+    MidiCfgParameter_t eParameterId;
+    uint32_t u32Value;
+} MidiEventPayloadCfgUpdateEvent_t;
 
 /** Union definitions with all event payload */
 typedef union MidiEventPayload
 {
     MidiEventPayloadSerialEvent_t xSerialEvent;
-    MidiEventPayloadMidiCmdData1_t xCmdData1;
-    MidiEventPayloadMidiCmdData2_t xCmdData2;
+    MidiEventPayloadCfgUpdateEvent_t xCfgUpdate;
 } MidiEventPayload_t;
 
 /** MIDI task event */

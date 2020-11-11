@@ -20,10 +20,18 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
+
+/** Midi control structure */
+typedef struct MidiCfg
+{
+    MidiMode_t eMode;
+    MidiChannel_t eChannel;
+} MidiCfg_t;
+
 /* Private define ------------------------------------------------------------*/
 
 /* Midi serial debug */
-// #define MIDI_SERIAL_DEBUG
+#define MIDI_SERIAL_DEBUG
 
 /* Define midi serial interface */
 #define MIDI_SERIAL                         SYS_SERIAL_1
@@ -60,6 +68,12 @@ MidiLibHandler_t xMidiHandler = {0};
 
 /** Buffer for SysEx data */
 static uint8_t u8SysExBuff[MIDI_SYSEX_BUFF_SIZE] = {0};
+
+/** Midi config handler */
+MidiCfg_t xMidiConfig = {
+    .eMode = MidiMode1,
+    .eChannel = MIDI_CH_01
+};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -141,12 +155,12 @@ void vMidiCallBackCmd1(uint8_t cmd, uint8_t data)
 #ifdef MIDI_SERIAL_DEBUG
     vCliRawPrintf("\r\nCMD: %02X-%02X", cmd, data);
 #endif
-    MidiEvent_t xEvent = { 
-        .eType = MIDI_EVENT_MIDI_CMD_DATA1, 
-        .uPayload.xCmdData1.u8Status = cmd,
-        .uPayload.xCmdData1.u8Data1 = data
-    };
-    (void)xQueueSend(xMidiQueueHandler, &xEvent, (TickType_t)0);
+    uint8_t u8Channel = MIDI_STATUS_GET_CH(cmd);
+
+    if (u8Channel == xMidiConfig.eChannel)
+    {
+        vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X", cmd, data);
+    }
 }
 
 void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1)
@@ -154,13 +168,44 @@ void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1)
 #ifdef MIDI_SERIAL_DEBUG
     vCliRawPrintf("\r\nCMD: %02X-%02X-%02X", cmd, data0, data1);
 #endif
-    MidiEvent_t xEvent = { 
-        .eType = MIDI_EVENT_MIDI_CMD_DATA2, 
-        .uPayload.xCmdData2.u8Status = cmd,
-        .uPayload.xCmdData2.u8Data1 = data0,
-        .uPayload.xCmdData2.u8Data2 = data1
-    };
-    (void)xQueueSend(xMidiQueueHandler, &xEvent, (TickType_t)0);
+    uint8_t u8Status = MIDI_STATUS_GET_CMD(cmd);
+    uint8_t u8Channel = MIDI_STATUS_GET_CH(cmd);
+
+    /* Check message channel */
+    if (u8Channel == xMidiConfig.eChannel)
+    {
+        vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", cmd, data0, data1);
+
+        bool bProcess = false;
+
+        switch (u8Status)
+        {
+            case MIDI_STATUS_NOTE_OFF:
+            case MIDI_STATUS_NOTE_ON:
+            case MIDI_STATUS_PITCH_BEND:
+            {
+                bProcess = true;
+            }
+            break;
+
+            case MIDI_STATUS_CC:
+            {
+                if (data0 == MIDI_CC_MOD)
+                {
+                    bProcess = true;
+                }
+            }
+            break;
+
+            default:
+            break;
+        }
+
+        if (bProcess)
+        {
+            vCliPrintf(MIDI_TASK_NAME, "Sending message to processing task");
+        }
+    }
 }
 
 void vMidiTaskMain( void *pvParameters )
@@ -196,22 +241,36 @@ void vMidiTaskMain( void *pvParameters )
                     }
                     break;
 
-                case MIDI_EVENT_MIDI_CMD_DATA1:
-                {
-                    vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", 
-                        xEvent.uPayload.xCmdData1.u8Status, 
-                        xEvent.uPayload.xCmdData1.u8Data1);
-                }
-                break;
+                case MIDI_EVENT_CFG_UPDATE:
+                    {
+                        switch (xEvent.uPayload.xCfgUpdate.eParameterId)
+                        {
+                            case MIDI_CFG_MODE:
+                                {
+                                    if (xEvent.uPayload.xCfgUpdate.u32Value < (uint32_t)MidiModeNum)
+                                    {
+                                        xMidiConfig.eMode = xEvent.uPayload.xCfgUpdate.u32Value;
+                                        vCliPrintf(MIDI_TASK_NAME, "Update Midi Mode: %d", xMidiConfig.eMode);
+                                    }
+                                }
+                                break;
 
-                case MIDI_EVENT_MIDI_CMD_DATA2:
-                {
-                    vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", 
-                        xEvent.uPayload.xCmdData2.u8Status, 
-                        xEvent.uPayload.xCmdData2.u8Data1,
-                        xEvent.uPayload.xCmdData2.u8Data2);
-                }
-                break;
+                            case MIDI_CFG_CHANNEL:
+                                {
+                                    if (xEvent.uPayload.xCfgUpdate.u32Value < (uint32_t)MIDI_CH_MAX_NUM)
+                                    {
+                                        xMidiConfig.eChannel = xEvent.uPayload.xCfgUpdate.u32Value;
+                                        vCliPrintf(MIDI_TASK_NAME, "Update Midi Channel: %d", xMidiConfig.eChannel);
+                                    }
+                                }
+                                break;
+
+                            default:
+                                vCliPrintf(MIDI_TASK_NAME, "Not defined parameter; %02X", xEvent.uPayload.xCfgUpdate.eParameterId);
+                                break;
+                        }
+                    }
+                    break;
 
                 default:
                     vCliPrintf(MIDI_TASK_NAME, "Not defined event; %02X", xEvent.eType);
