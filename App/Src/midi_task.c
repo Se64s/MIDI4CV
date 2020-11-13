@@ -25,7 +25,7 @@
 typedef struct MidiCfg
 {
     MidiMode_t eMode;
-    MidiChannel_t eChannel;
+    uint32_t u32ChannelMask;
 } MidiCfg_t;
 
 /* Private define ------------------------------------------------------------*/
@@ -49,6 +49,9 @@ typedef struct MidiCfg
 #define MIDI_SYSEX_BUFF_SIZE                (32U)
 
 /* Private macro -------------------------------------------------------------*/
+
+#define CHECK_CHANNEL_MASK(ch, mask)        ( ( ( 1U << (ch) ) & (mask) ) != 0x00 )
+
 #ifdef USE_USER_ASSERT
 #define USER_ASSERT(A)      ERR_ASSERT(A)
 #else
@@ -72,7 +75,7 @@ static uint8_t u8SysExBuff[MIDI_SYSEX_BUFF_SIZE] = {0};
 /** Midi config handler */
 MidiCfg_t xMidiConfig = {
     .eMode = MidiMode1,
-    .eChannel = MIDI_CH_01
+    .u32ChannelMask = MIDI_CH_01
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,7 +160,7 @@ void vMidiCallBackCmd1(uint8_t cmd, uint8_t data)
 #endif
     uint8_t u8Channel = MIDI_STATUS_GET_CH(cmd);
 
-    if (u8Channel == xMidiConfig.eChannel)
+    if (CHECK_CHANNEL_MASK(u8Channel, xMidiConfig.u32ChannelMask))
     {
         vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X", cmd, data);
     }
@@ -172,7 +175,7 @@ void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1)
     uint8_t u8Channel = MIDI_STATUS_GET_CH(cmd);
 
     /* Check message channel */
-    if (u8Channel == xMidiConfig.eChannel)
+    if (CHECK_CHANNEL_MASK(u8Channel, xMidiConfig.u32ChannelMask))
     {
         vCliPrintf(MIDI_TASK_NAME, "CMD: %02X-%02X-%02X", cmd, data0, data1);
 
@@ -255,12 +258,12 @@ void vMidiTaskMain( void *pvParameters )
                                 }
                                 break;
 
-                            case MIDI_CFG_CHANNEL:
+                            case MIDI_CFG_CHANNEL_MASK:
                                 {
                                     if (xEvent.uPayload.xCfgUpdate.u32Value < (uint32_t)MIDI_CH_MAX_NUM)
                                     {
-                                        xMidiConfig.eChannel = xEvent.uPayload.xCfgUpdate.u32Value;
-                                        vCliPrintf(MIDI_TASK_NAME, "Update Midi Channel: %d", xMidiConfig.eChannel);
+                                        xMidiConfig.u32ChannelMask = xEvent.uPayload.xCfgUpdate.u32Value;
+                                        vCliPrintf(MIDI_TASK_NAME, "Update Channel Mask: %d", xMidiConfig.u32ChannelMask);
                                     }
                                 }
                                 break;

@@ -57,7 +57,7 @@ typedef struct MidiEventPayloadSerialEvent
 typedef enum MidiCfgParameter
 {
     MIDI_CFG_MODE = 0U,     /**< Midi mode */
-    MIDI_CFG_CHANNEL,       /**< Midi channel */
+    MIDI_CFG_CHANNEL_MASK,  /**< Midi channel */
     MIDI_CFG_NUM_PARAM,     /**< Number of defined parameters */
 } MidiCfgParameter_t;
 
