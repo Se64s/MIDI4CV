@@ -22,6 +22,7 @@
 #include "sys_rtos.h"
 #include "cli_task.h"
 #include "midi_task.h"
+#include "cv_ctrl_task.h"
 #ifdef USE_USER_ASSERT
 #include "user_error.h"
 #endif
@@ -57,6 +58,7 @@ int main(void)
   /* Init user tasks */
   (void)bCliTaskInit();
   (void)bMidiTaskInit();
+  (void)bCvCtrlTaskInit();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();

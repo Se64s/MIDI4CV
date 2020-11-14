@@ -12,6 +12,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "midi_task.h"
 #include "cli_task.h"
+#include "cv_ctrl_task.h"
 #include "sys_serial.h"
 #include "midi_lib.h"
 #ifdef USE_USER_ASSERT
@@ -75,7 +76,7 @@ static uint8_t u8SysExBuff[MIDI_SYSEX_BUFF_SIZE] = {0};
 /** Midi config handler */
 MidiCfg_t xMidiConfig = {
     .eMode = MidiMode1,
-    .u32ChannelMask = MIDI_CH_01
+    .u32ChannelMask = 0x01  /**< Mask for channel 01 */
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,6 +208,15 @@ void vMidiCallBackCmd2(uint8_t cmd, uint8_t data0, uint8_t data1)
         if (bProcess)
         {
             vCliPrintf(MIDI_TASK_NAME, "Sending message to processing task");
+
+            CvCtrlEvent_t xCvCtrlEvent = {
+                .eType = CVCTRL_EVENT_MIDI_CMD,
+                .uPayload.xMidiCmdEvent.u8Status = cmd,
+                .uPayload.xMidiCmdEvent.u8Data0 = data0,
+                .uPayload.xMidiCmdEvent.u8Data1 = data1
+            };
+
+            (void)xCvCtrlQueueEvent(&xCvCtrlEvent);
         }
     }
 }
@@ -316,7 +326,7 @@ bool xMidiQueueEvent(MidiEvent_t *xMidiEvent)
 
     if (xMidiQueueHandler != NULL)
     {
-        if (xQueueSend(xMidiQueueHandler, (void*) &xMidiEvent, (TickType_t) 0) == pdTRUE)
+        if (xQueueSend(xMidiQueueHandler, (void*)xMidiEvent, (TickType_t) 0) == pdTRUE)
         {
             bRetval = true;
         }

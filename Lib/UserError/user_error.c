@@ -10,6 +10,9 @@
 
 /* Private defines ----------------------------------------------------------*/
 
+/** Disable IRQ */
+#define DISABLE_IRQ()   __asm volatile ( " cpsid i " ::: "memory" )
+
 /** Index address PC */
 #define MSG_INDEX_PC    30U
 
@@ -60,6 +63,8 @@ void vErrorInit(err_print_data vPrintError)
 
 void vErrorAssert(const void *pc, const void *lr)
 {
+    DISABLE_IRQ();
+
     xGlobalAssert.pc = (uint32_t)pc;
     xGlobalAssert.lr = (uint32_t)lr;
 

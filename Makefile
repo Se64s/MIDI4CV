@@ -46,6 +46,7 @@ App/Src/main.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
 App/Src/midi_task.c \
+App/Src/cv_ctrl_task.c \
 BSP/Src/stm32g0xx_it.c \
 BSP/Src/stm32g0xx_hal_msp.c \
 BSP/Src/system_stm32g0xx.c \

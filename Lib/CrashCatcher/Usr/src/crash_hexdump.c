@@ -15,6 +15,9 @@
 #define USER_ASSERT(A)      (void)(A)
 #endif
 
+/** Disable IRQ */
+#define DISABLE_IRQ()   __asm volatile ( " cpsid i " ::: "memory" )
+
 static void _uart_init()
 {
     (void)SYS_LL_UartInit(SYS_LL_SERIAL_0);
@@ -87,6 +90,8 @@ static void dumpWords(const uint32_t* pMemory, size_t elementCount)
    a dump file, prompting the user to begin a crash dump, or whatever makes sense for your scenario. */
 void CrashCatcher_DumpStart(const CrashCatcherInfo* pInfo)
 {
+    DISABLE_IRQ();
+
     _uart_init();
 
     uint8_t crash_start_flag[17] = "\r\n\r\n###CRASH###\r\n";
