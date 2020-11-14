@@ -13,6 +13,7 @@
 #include "cv_ctrl_task.h"
 #include "cli_task.h"
 #include "midi_lib.h"
+#include "sys_gpio.h"
 #ifdef USE_USER_ASSERT
 #include "user_error.h"
 #endif
@@ -29,6 +30,10 @@
 
 /* Number of commands that can queue the task */
 #define CVCTRL_QUEUE_SIZE                   (5U)
+
+/* GPIO assignations */
+#define CVCTRL_GPIO_BUTTON                  SYS_GPIO_00
+#define CVCTRL_GPIO_LED                     SYS_GPIO_01
 
 /* Private macro -------------------------------------------------------------*/
 
@@ -55,7 +60,32 @@ QueueHandle_t xCvCtrlQueueHandler = NULL;
   */
 void vCvCtrlTaskMain(void *pvParameters);
 
+/**
+ * @brief CAllback to handle button irq
+ * 
+ * @param event 
+ */
+void vButtonCallBack(sys_gpio_event_t event);
+
 /* Private fuctions ----------------------------------------------------------*/
+
+void vButtonCallBack(sys_gpio_event_t event)
+{
+    if (event == SYS_GPIO_EXTI_EVENT)
+    {
+        if ((xCvCtrlTaskHandle != NULL) && (xCvCtrlQueueHandler != NULL))
+        {
+            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+            CvCtrlEvent_t xEvent = { 
+                .eType = CVCTRL_EVENT_BUTTON_PRESS, 
+                .uPayload.xButtonEvent.eId = CVCTRL_BUTT0N_ID_0,
+                .uPayload.xButtonEvent.eType = CVCTRL_BUTTON_EVENT_SHORT_PRESS
+            };
+
+            xQueueSendFromISR(xCvCtrlQueueHandler, &xEvent, &xHigherPriorityTaskWoken);
+        }
+    }
+}
 
 void vCvCtrlTaskMain( void *pvParameters )
 {
@@ -85,9 +115,11 @@ void vCvCtrlTaskMain( void *pvParameters )
 
                 case CVCTRL_EVENT_BUTTON_PRESS:
                     {
-                        vCliPrintf(CVCTRL_TASK_NAME, "Button Event: Id %02X Type %02X", 
+                        vCliPrintf(CVCTRL_TASK_NAME, "Button Event: %02X-%02X", 
                             xEvent.uPayload.xButtonEvent.eId,
                             xEvent.uPayload.xButtonEvent.eType);
+
+                        SYS_GPIO_Toggle(CVCTRL_GPIO_LED);
                     }
                     break;
 
@@ -106,6 +138,10 @@ void vCvCtrlTaskMain( void *pvParameters )
 bool bCvCtrlTaskInit(void)
 {
     bool bRetval = false;
+
+    /* Init gpio handlers */
+    (void)SYS_GPIO_Init(CVCTRL_GPIO_BUTTON, SYS_GPIO_MODE_EXTI, vButtonCallBack);
+    (void)SYS_GPIO_Init(CVCTRL_GPIO_LED, SYS_GPIO_MODE_OUT, NULL);
 
     /* Create task */
     xTaskCreate(vCvCtrlTaskMain, CVCTRL_TASK_NAME, CVCTRL_TASK_STACK, NULL, CVCTRL_TASK_PRIO, &xCvCtrlTaskHandle);

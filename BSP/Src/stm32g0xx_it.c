@@ -166,4 +166,19 @@ void USART3_4_IRQHandler(void)
   }
 }
 
+/**
+  * @brief  This function handles external line 4_15 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI4_15_IRQHandler(void)
+{
+  /* Loop to check IRQ state */
+  for (uint16_t irqIndex = 0U; irqIndex < 16U; irqIndex++)
+  {
+    uint16_t gpio_pin = (1U << irqIndex);
+    HAL_GPIO_EXTI_IRQHandler(gpio_pin);
+  }
+}
+
 /*EOF*/

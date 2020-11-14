@@ -54,6 +54,8 @@ BSP/Src/sys_mcu.c \
 BSP/Src/sys_rtos.c \
 BSP/Src/sys_serial.c \
 BSP/Src/sys_ll_serial.c \
+BSP/Src/sys_gpio.c \
+BSP/Src/sys_i2c.c \
 Lib/cbuf/circular_buffer.c \
 Lib/printf/printf.c \
 Lib/midi/midi_lib.c \
