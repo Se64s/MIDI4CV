@@ -22,6 +22,7 @@ extern "C"
 #include <stdint.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "timers.h"
 #include "queue.h"
 #include "semphr.h"
 #include "FreeRTOSConfig.h"

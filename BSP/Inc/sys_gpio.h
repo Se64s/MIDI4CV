@@ -63,7 +63,8 @@ typedef enum sys_gpio_status
 /** Gpio event */
 typedef enum sys_gpio_event
 {
-    SYS_GPIO_EXTI_EVENT = 0U,
+    SYS_GPIO_EXTI_FALL_EVENT = 0U,
+    SYS_GPIO_EXTI_RISE_EVENT,
     SYS_GPIO_EVENT_ERROR,
     SYS_GPIO_EVENT_NOTDEF = 0xFF,
 } sys_gpio_event_t;

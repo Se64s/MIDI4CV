@@ -66,7 +66,34 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
     {
         if (gpio_cb_list[eGpioId] != NULL)
         {
-            gpio_cb_list[eGpioId](SYS_GPIO_EXTI_EVENT);
+            gpio_cb_list[eGpioId](SYS_GPIO_EXTI_FALL_EVENT);
+        }
+    }
+}
+
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+    sys_gpio_port_t eGpioId = SYS_SERIAL_NOTDEF;
+
+    if (GPIO_Pin == GPIO_0_PIN)
+    {
+        eGpioId = SYS_GPIO_00;
+    }
+    else if (GPIO_Pin == GPIO_1_PIN)
+    {
+        eGpioId = SYS_GPIO_01;
+    }
+
+    if (eGpioId != SYS_SERIAL_NOTDEF)
+    {
+        if (gpio_cb_list[eGpioId] != NULL)
+        {
+            gpio_cb_list[eGpioId](SYS_GPIO_EXTI_RISE_EVENT);
         }
     }
 }
@@ -96,7 +123,7 @@ sys_gpio_status_t SYS_GPIO_Init(sys_gpio_port_t gpioId, sys_gpio_mode_t mode, sy
         else if (mode == SYS_GPIO_MODE_EXTI)
         {
             gpio_cb_list[gpioId] = event_cb;
-            GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+            GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
         }
         else

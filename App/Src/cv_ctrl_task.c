@@ -35,6 +35,10 @@
 #define CVCTRL_GPIO_BUTTON                  SYS_GPIO_00
 #define CVCTRL_GPIO_LED                     SYS_GPIO_01
 
+/* Define Button times */
+#define BUTTON_TIME_LONG                    (1000U)
+#define BUTTON_TIME_VERY_LONG               (5000U)
+
 /* Private macro -------------------------------------------------------------*/
 
 #ifdef USE_USER_ASSERT
@@ -50,6 +54,9 @@ TaskHandle_t xCvCtrlTaskHandle = NULL;
 
 /** Queue handler */
 QueueHandle_t xCvCtrlQueueHandler = NULL;
+
+/** Button timer handle */
+TimerHandle_t  xButtonTimerHandler = NULL;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -67,24 +74,69 @@ void vCvCtrlTaskMain(void *pvParameters);
  */
 void vButtonCallBack(sys_gpio_event_t event);
 
+/**
+ * @brief Handle of timer callback.
+ * 
+ * @param xTimer 
+ */
+void vButtonTimerCallBack(TimerHandle_t xTimer);
+
 /* Private fuctions ----------------------------------------------------------*/
 
 void vButtonCallBack(sys_gpio_event_t event)
 {
-    if (event == SYS_GPIO_EXTI_EVENT)
-    {
-        if ((xCvCtrlTaskHandle != NULL) && (xCvCtrlQueueHandler != NULL))
-        {
-            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-            CvCtrlEvent_t xEvent = { 
-                .eType = CVCTRL_EVENT_BUTTON_PRESS, 
-                .uPayload.xButtonEvent.eId = CVCTRL_BUTT0N_ID_0,
-                .uPayload.xButtonEvent.eType = CVCTRL_BUTTON_EVENT_SHORT_PRESS
-            };
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-            xQueueSendFromISR(xCvCtrlQueueHandler, &xEvent, &xHigherPriorityTaskWoken);
+    if ((event == SYS_GPIO_EXTI_RISE_EVENT) || (event == SYS_GPIO_EXTI_FALL_EVENT))
+    {
+        if (xButtonTimerHandler != NULL)
+        {
+            if (event == SYS_GPIO_EXTI_FALL_EVENT)
+            {
+                SYS_GPIO_Set(CVCTRL_GPIO_LED, SYS_GPIO_STATE_SET);
+
+                (void)xTimerStartFromISR(xButtonTimerHandler, &xHigherPriorityTaskWoken);
+            }
+            else
+            {
+                SYS_GPIO_Set(CVCTRL_GPIO_LED, SYS_GPIO_STATE_RESET);
+
+                if( xTimerIsTimerActive( xButtonTimerHandler ) != pdFALSE )
+                {
+                    CvCtrlEvent_t xEvent = { 
+                        .eType = CVCTRL_EVENT_BUTTON_PRESS, 
+                        .uPayload.xButtonEvent.eId = CVCTRL_BUTT0N_ID_0,
+                        .uPayload.xButtonEvent.eType = CVCTRL_BUTTON_EVENT_LONG_PRESS
+                    };
+
+                    TickType_t xRemainingTime;
+                    xRemainingTime = xTimerGetExpiryTime(xButtonTimerHandler) - xTaskGetTickCount();
+
+                    if ( xRemainingTime > (BUTTON_TIME_VERY_LONG - BUTTON_TIME_LONG) )
+                    {
+                        xEvent.uPayload.xButtonEvent.eType = CVCTRL_BUTTON_EVENT_SHORT_PRESS;
+                    }
+
+                    xQueueSendFromISR(xCvCtrlQueueHandler, &xEvent, &xHigherPriorityTaskWoken);
+                }
+
+                xTimerStop(xButtonTimerHandler, 0U);
+            }
         }
     }
+}
+
+void vButtonTimerCallBack(TimerHandle_t xTimer)
+{
+    (void)xTimer;
+
+    CvCtrlEvent_t xEvent = { 
+        .eType = CVCTRL_EVENT_BUTTON_PRESS, 
+        .uPayload.xButtonEvent.eId = CVCTRL_BUTT0N_ID_0,
+        .uPayload.xButtonEvent.eType = CVCTRL_BUTTON_EVENT_VERY_LONG_PRESS
+    };
+
+    xQueueSend(xCvCtrlQueueHandler, &xEvent, (TickType_t)0);
 }
 
 void vCvCtrlTaskMain( void *pvParameters )
@@ -115,11 +167,7 @@ void vCvCtrlTaskMain( void *pvParameters )
 
                 case CVCTRL_EVENT_BUTTON_PRESS:
                     {
-                        vCliPrintf(CVCTRL_TASK_NAME, "Button Event: %02X-%02X", 
-                            xEvent.uPayload.xButtonEvent.eId,
-                            xEvent.uPayload.xButtonEvent.eType);
-
-                        SYS_GPIO_Toggle(CVCTRL_GPIO_LED);
+                        vCliPrintf(CVCTRL_TASK_NAME, "Button Event: %02X", xEvent.uPayload.xButtonEvent.eType);
                     }
                     break;
 
@@ -149,11 +197,15 @@ bool bCvCtrlTaskInit(void)
     /* Create task queue */
     xCvCtrlQueueHandler = xQueueCreate(CVCTRL_QUEUE_SIZE, CVCTRL_EVENT_QUEUE_ELEMENT_SIZE);
 
+    /* Timer to control button actions */
+    xButtonTimerHandler = xTimerCreate("ButtonTimer", pdMS_TO_TICKS(BUTTON_TIME_VERY_LONG), pdFALSE, (void *) 0, vButtonTimerCallBack);
+
     /* Check resources */
     ERR_ASSERT(xCvCtrlTaskHandle);
     ERR_ASSERT(xCvCtrlQueueHandler);
+    ERR_ASSERT(xButtonTimerHandler);
 
-    if ((xCvCtrlTaskHandle != NULL) && (xCvCtrlQueueHandler != NULL))
+    if ((xCvCtrlTaskHandle != NULL) && (xCvCtrlQueueHandler != NULL) && (xButtonTimerHandler != NULL))
     {
         bRetval = true;
     }
