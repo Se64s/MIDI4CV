@@ -4,12 +4,6 @@ SETLOCAL ENABLEEXTENSIONS
 SET me=%~n0
 SET parent=%~dp0
 
-:: Call parameter example
-:: "C:\Program Files (x86)\SEGGER\JLink\jlink.exe" 
-:: LPC54608J512 
-:: "C:\Firmware\01_projects\00_TOOLS\test\bootstopper.bin" 
-:: 0x00000000
-
 :: Call parameters:
 :: arg1: path to jlink app
 :: arg2: action, <FLASH> / <ERASE>

@@ -30,12 +30,18 @@
 /* Private user code ---------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim3;
+
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
 extern UART_HandleTypeDef huart2;
+
 extern DMA_HandleTypeDef hdma_usart3_rx;
 extern DMA_HandleTypeDef hdma_usart3_tx;
 extern UART_HandleTypeDef huart3;
+
+extern DMA_HandleTypeDef hdma_i2c1_tx;
+extern DMA_HandleTypeDef hdma_i2c1_rx;
+extern I2C_HandleTypeDef hi2c1;
 
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
@@ -111,6 +117,9 @@ void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_usart3_tx);
   HAL_DMA_IRQHandler(&hdma_usart3_rx);
+
+  HAL_DMA_IRQHandler(&hdma_i2c1_tx);
+  HAL_DMA_IRQHandler(&hdma_i2c1_rx);
 }
 
 /**
@@ -163,6 +172,21 @@ void USART3_4_IRQHandler(void)
 
     /* Abort and retrigger reception */
     HAL_UART_AbortReceive_IT(&huart3);
+  }
+}
+
+/**
+  * @brief This function handles I2C1 event global interrupt.
+  */
+void I2C1_IRQHandler(void)
+{
+  if (hi2c1.Instance->ISR & (I2C_FLAG_BERR | I2C_FLAG_ARLO | I2C_FLAG_OVR))
+  {
+    HAL_I2C_ER_IRQHandler(&hi2c1);
+  } 
+  else
+  {
+    HAL_I2C_EV_IRQHandler(&hi2c1);
   }
 }
 

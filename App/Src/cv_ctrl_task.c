@@ -14,6 +14,8 @@
 #include "cli_task.h"
 #include "midi_lib.h"
 #include "sys_gpio.h"
+#include "sys_i2c.h"
+#include "dac_mcp4728.h"
 #ifdef USE_USER_ASSERT
 #include "user_error.h"
 #endif
@@ -34,6 +36,9 @@
 /* GPIO assignations */
 #define CVCTRL_GPIO_BUTTON                  SYS_GPIO_00
 #define CVCTRL_GPIO_LED                     SYS_GPIO_01
+
+/* I2C Port setup */
+#define I2C_DAC                             SYS_I2C_0
 
 /* Define Button times */
 #define BUTTON_TIME_LONG                    (1000U)
@@ -57,6 +62,15 @@ QueueHandle_t xCvCtrlQueueHandler = NULL;
 
 /** Button timer handle */
 TimerHandle_t  xButtonTimerHandler = NULL;
+
+/** Dac handler */
+DacMcp4728_t xDacHandler = { 
+    .u8Address = DAC_BASE_ADDR,
+    .u8IfPort = I2C_DAC,
+    .eVref = DAC_VREF_INT,
+    .eGain = DAC_GAIN_1,
+    .ePd = DAC_PD_NORMAL
+ };
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -190,6 +204,9 @@ bool bCvCtrlTaskInit(void)
     /* Init gpio handlers */
     (void)SYS_GPIO_Init(CVCTRL_GPIO_BUTTON, SYS_GPIO_MODE_EXTI, vButtonCallBack);
     (void)SYS_GPIO_Init(CVCTRL_GPIO_LED, SYS_GPIO_MODE_OUT, NULL);
+
+    /* Dac init */
+    (void)DacInit(&xDacHandler);
 
     /* Create task */
     xTaskCreate(vCvCtrlTaskMain, CVCTRL_TASK_NAME, CVCTRL_TASK_STACK, NULL, CVCTRL_TASK_PRIO, &xCvCtrlTaskHandle);

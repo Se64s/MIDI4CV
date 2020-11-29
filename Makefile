@@ -59,6 +59,7 @@ BSP/Src/sys_i2c.c \
 Lib/cbuf/circular_buffer.c \
 Lib/printf/printf.c \
 Lib/midi/midi_lib.c \
+Lib/dac_mcp4728/dac_mcp4728.c \
 Lib/UserError/user_error.c \
 Lib/CrashCatcher/Core/src/CrashCatcher.c \
 Lib/CrashCatcher/Usr/src/crash_hexdump.c \
@@ -81,6 +82,8 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_uart_ex.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_i2c.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_i2c_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
@@ -162,6 +165,7 @@ C_INCLUDES =  \
 -ILib/printf \
 -ILib/UserError \
 -ILib/midi \
+-ILib/dac_mcp4728 \
 -ILib/CrashCatcher/include \
 -ILib/CrashCatcher/Core/src \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \

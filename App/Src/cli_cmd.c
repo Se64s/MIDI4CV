@@ -12,6 +12,12 @@
 #include "FreeRTOS.h"
 #include "FreeRTOS_CLI.h"
 #include "sys_mcu.h"
+#include "dac_mcp4728.h"
+#include "printf.h"
+
+/* TODO: change atoi for ligher version */
+#include <stdlib.h>
+
 #ifdef USE_USER_ASSERT
 #include "user_error.h"
 #endif
@@ -26,6 +32,15 @@
 #endif
 
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+ * @brief  Force value in dac.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t userDacSetVal(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
 /**
  * @brief  Force reset device.
@@ -65,6 +80,13 @@ static BaseType_t userGetTime(char *pcWriteBuffer, size_t xWriteBufferLen, const
 
 /* Private variables ---------------------------------------------------------*/
 
+static const CLI_Command_Definition_t xDacSetVal = {
+    "dacSetVal",
+    "dacSetVal:\tSet value on DAC channel: <Channel 0-3> <Dac Value 0-4096>",
+    userDacSetVal,
+    2U
+};
+
 static const CLI_Command_Definition_t xUserReset = {
     "reset",
     "reset:\tForce device reset",
@@ -95,6 +117,47 @@ static const CLI_Command_Definition_t xUserTime = {
 
 /* Callbacks -----------------------------------------------------------------*/
 /* Private application code --------------------------------------------------*/
+
+static BaseType_t userDacSetVal(char *pcWriteBuffer, 
+        size_t xWriteBufferLen, 
+        const char *pcCommandString)
+{
+    uint8_t u8DacChannel;
+    uint16_t u16DacValue;
+    char *pcParameter1;
+    char *pcParameter2;
+    BaseType_t xParameter1StringLength;
+    BaseType_t xParameter2StringLength;
+
+    /* Get cmd parameters */
+    pcParameter1 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 1U, &xParameter1StringLength);
+    pcParameter2 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 2U, &xParameter2StringLength);
+    pcParameter1[xParameter1StringLength] = 0x00;
+    pcParameter2[xParameter2StringLength] = 0x00;
+    u8DacChannel = (uint8_t)atoi(pcParameter1);
+    u16DacValue = (uint16_t)atoi(pcParameter2);
+
+    /* Check parameters */
+    if ((u8DacChannel < (uint8_t)DAC_CH_MAX_NUM) && (u16DacValue < DAC_MAX_COUNT))
+    {
+        DacMcp4728_t xDacHandler = { 
+            .u8Address = DAC_BASE_ADDR,
+            .u8IfPort = 0,
+            .eVref = DAC_VREF_INT,
+            .eGain = DAC_GAIN_1,
+            .ePd = DAC_PD_NORMAL
+        };
+        (void)DacUpdateChannel(&xDacHandler, u8DacChannel, u16DacValue);
+        vCliPrintf(CLI_TASK_NAME, "CH %02d - VALUE %d", u8DacChannel, u16DacValue);
+        vCliPrintf(CLI_TASK_NAME, "OK");
+    }
+    else
+    {
+        vCliPrintf(CLI_TASK_NAME, "Invalid parameters");
+        vCliPrintf(CLI_TASK_NAME, "ERROR");
+    }
+    return pdFALSE;
+}
 
 static BaseType_t userReset(char *pcWriteBuffer,
         size_t xWriteBufferLen,
@@ -134,6 +197,7 @@ static BaseType_t userGetTime(char *pcWriteBuffer,
 
 void cli_cmd_init(void)
 {
+    (void)FreeRTOS_CLIRegisterCommand(&xDacSetVal);
     (void)FreeRTOS_CLIRegisterCommand(&xUserReset);
     (void)FreeRTOS_CLIRegisterCommand(&xUserAssert);
     (void)FreeRTOS_CLIRegisterCommand(&xUserFault);
